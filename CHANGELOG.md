@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### Analyzer
+#### Added
+- Czech PII recognizers for `CZ_BIRTH_NUMBER`, `CZ_BANK_ACCOUNT`, `CZ_ID_CARD`, `CZ_PASSPORT`, and `CZ_DRIVER_LICENSE`, plus Czech `DATE_TIME` date coverage (`CzDateRecognizer`); all are disabled by default. Includes a Czech language support recipe (`docs/recipes/czech-language-support`)
+
 ### Anonymizer
 ### General
 #### Fixed

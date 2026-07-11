@@ -13,6 +13,20 @@ from .country_specific.australia.au_tfn_recognizer import AuTfnRecognizer
 # Canada recognizers
 from .country_specific.canada.ca_sin_recognizer import CaSinRecognizer
 
+# Czechia recognizers
+from .country_specific.czechia.cz_bank_account_recognizer import (
+    CzBankAccountRecognizer,
+)
+from .country_specific.czechia.cz_birth_number_recognizer import (
+    CzBirthNumberRecognizer,
+)
+from .country_specific.czechia.cz_date_recognizer import CzDateRecognizer
+from .country_specific.czechia.cz_driver_license_recognizer import (
+    CzDriverLicenseRecognizer,
+)
+from .country_specific.czechia.cz_id_card_recognizer import CzIdCardRecognizer
+from .country_specific.czechia.cz_passport_recognizer import CzPassportRecognizer
+
 # Finland recognizers
 from .country_specific.finland.fi_personal_identity_code_recognizer import (
     FiPersonalIdentityCodeRecognizer,
@@ -256,6 +270,13 @@ __all__ = [
     "NgNinRecognizer",
     "NgVehicleRegistrationRecognizer",
     "MedicalNERRecognizer",
+    # Czechia recognizers
+    "CzBirthNumberRecognizer",
+    "CzBankAccountRecognizer",
+    "CzDateRecognizer",
+    "CzDriverLicenseRecognizer",
+    "CzIdCardRecognizer",
+    "CzPassportRecognizer",
     # Germany recognizers
     "DeTaxIdRecognizer",
     "DeTaxNumberRecognizer",
