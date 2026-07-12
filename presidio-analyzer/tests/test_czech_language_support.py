@@ -15,12 +15,14 @@ Reproduces the two historical failure modes and verifies both are fixed:
 (b) Czech identifiers collided with PHONE_NUMBER: the phone recognizer
     used to win on ``850412/0003`` (rodné číslo) and on part of
     ``19-123456789/0800`` (bank account). The Czech recognizers use
-    context words and validation to outscore PHONE_NUMBER so that
-    score-based conflict resolution (as applied by presidio-anonymizer)
-    picks the Czech entity.
+    context words and validation to outscore PHONE_NUMBER so that the
+    anonymizer's default conflict resolution (identical spans: higher
+    score wins; nested spans: the containing span wins) picks the
+    Czech entity.
 
 All personal data in the test text is fictitious.
 """
+import copy
 from typing import Dict, List, Tuple
 
 import pytest
@@ -135,26 +137,65 @@ def _czech_recognizers() -> List:
 
 def _resolve_conflicts(results: List[RecognizerResult]) -> List[RecognizerResult]:
     """
-    Keep the highest-scoring result on overlapping spans.
+    Mirror presidio-anonymizer's default conflict resolution.
 
-    Mirrors the score-based conflict resolution presidio-anonymizer
-    applies before operating on the text (higher score wins; on equal
-    scores the longer, earlier span wins).
+    Replicates ``ConflictResolutionStrategy.MERGE_SIMILAR_OR_CONTAINED``
+    (``AnonymizerEngine._remove_conflicts_and_get_text_manipulation_data``):
+    intersecting results of the same entity type are first merged into a
+    single span with the maximum score; then a result is dropped when
+    another result covers the same indices with an equal-or-higher
+    score, or fully contains it. Partial intersections between
+    different entity types are left untouched, exactly like the
+    anonymizer default — ``_anonymize`` asserts none remain, so a
+    regression that introduces one fails loudly instead of being
+    silently normalized away.
     """
-    ordered = sorted(
-        results, key=lambda r: (-r.score, -(r.end - r.start), r.start)
-    )
-    kept: List[RecognizerResult] = []
-    for result in ordered:
-        if all(
-            result.end <= other.start or result.start >= other.end for other in kept
-        ):
-            kept.append(result)
-    return sorted(kept, key=lambda r: r.start)
+    results = copy.deepcopy(results)
+
+    # Pass 1: merge intersecting results of the same entity type.
+    merged: List[RecognizerResult] = []
+    other_elements = results.copy()
+    for result in results:
+        other_elements.remove(result)
+        merge_target = next(
+            (
+                other
+                for other in other_elements
+                if other.entity_type == result.entity_type
+                and result.intersects(other) > 0
+            ),
+            None,
+        )
+        if merge_target is None:
+            other_elements.append(result)
+            merged.append(result)
+        else:
+            merge_target.start = min(result.start, merge_target.start)
+            merge_target.end = max(result.end, merge_target.end)
+            merge_target.score = max(result.score, merge_target.score)
+
+    # Pass 2: drop results whose indices equal another's with an
+    # equal-or-higher score, and results fully contained in another.
+    unique: List[RecognizerResult] = []
+    other_elements = merged.copy()
+    for result in merged:
+        other_elements.remove(result)
+        if not any(result.has_conflict(other) for other in other_elements):
+            other_elements.append(result)
+            unique.append(result)
+
+    return sorted(unique, key=lambda r: r.start)
 
 
 def _anonymize(text: str, resolved: List[RecognizerResult]) -> str:
     """Replace resolved entities with numbered <ENTITY_TYPE_N> placeholders."""
+    for previous, current in zip(resolved, resolved[1:]):
+        assert previous.end <= current.start, (
+            f"Partial intersection survived conflict resolution "
+            f"([{previous}] vs [{current}]); the anonymizer's default "
+            f"strategy would leave both in place and the replacement "
+            f"output would be ill-defined"
+        )
     counters: Dict[str, int] = {}
     pieces: List[str] = []
     cursor = 0
