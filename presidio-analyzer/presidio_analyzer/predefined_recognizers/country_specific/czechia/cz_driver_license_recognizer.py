@@ -36,7 +36,7 @@ class CzDriverLicenseRecognizer(PatternRecognizer):
     PATTERNS = [
         Pattern(
             "Řidičský průkaz (2 letters + digits)",
-            r"\b[A-Z]{2}\s?\d{6,9}(?![\w/-])",
+            r"(?<![\w/-])[A-Z]{2}\s?\d{6,9}(?![\w/-])",
             0.3,
         ),
     ]

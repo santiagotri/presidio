@@ -45,6 +45,9 @@ def entities():
         ("ED 99412", 0, ()),
         # Embedded in a longer run -> no match
         ("CZ1234567890", 0, ()),
+        # Glued to a slash/hyphen-delimited identifier -> no match
+        ("19-CZ123456789", 0, ()),
+        ("spis/CZ123456789", 0, ()),
         # fmt: on
     ],
 )

@@ -38,7 +38,7 @@ class CzPassportRecognizer(PatternRecognizer):
     PATTERNS = [
         Pattern(
             "Cestovní pas (letter prefix)",
-            r"\b[A-Z]{2}\s?\d{6,7}(?![\w/-])",
+            r"(?<![\w/-])[A-Z]{2}\s?\d{6,7}(?![\w/-])",
             0.3,
         ),
         Pattern(

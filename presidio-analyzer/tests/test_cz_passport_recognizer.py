@@ -39,6 +39,9 @@ _DIGITS_SCORE = 0.1
         ("AB123456789", 0, (), None),
         # Embedded in a longer digit run -> no match
         ("391826341234", 0, (), None),
+        # Glued to a slash/hyphen-delimited identifier -> no match
+        ("č. j. 123-AB123456", 0, (), None),
+        ("spis/AB123456", 0, (), None),
         # fmt: on
     ],
 )
