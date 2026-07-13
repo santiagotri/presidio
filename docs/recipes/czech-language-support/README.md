@@ -17,8 +17,7 @@ This recipe provides:
 
 - `spacy_en_cs.yaml` — a ready-to-use NLP engine configuration that loads both
   `en_core_web_lg` and the multilingual `xx_ent_wiki_sm` (spaCy publishes no
-  Czech-specific pretrained pipeline; the multilingual WikiNER model is the
-  official artifact that covers Czech PERSON/LOCATION/ORG detection)
+  Czech-specific pretrained pipeline)
 - An overview of all Czech-specific recognizers available in Presidio
 
 ## Quick Start
