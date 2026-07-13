@@ -27,6 +27,20 @@ class CzBankAccountRecognizer(PatternRecognizer):
     MAX_SCORE; a failure keeps the base pattern score so that context
     words ("účet", "účtu", ...) drive the final confidence.
 
+    Czech legal citations (zákon č. 262/2006 Sb., 115/2010 Sb., ...)
+    share the ``NNN/YYYY`` shape with prefix-less accounts and are very
+    common in legal and public-administration text, so two guards apply:
+
+    - ``invalidate_result`` drops prefix-less matches whose numerator
+      has at most 3 digits (Czech laws are numbered up to ~500 per
+      year) and whose "bank code" is a year-like 1900-2099 value —
+      even when the numerator passes the checksum (262 does).
+    - A checksum pass with a year-like bank code that the ČNB never
+      issued is not promoted to MAX_SCORE; it keeps the pattern score.
+      Codes 2010 (Fio banka), 2060 (Citfin) and
+      2070 (TRINITY BANK) fall inside the year range but are real,
+      so accounts at those banks still validate fully.
+
     Examples (fictitious): 19-2000145399/0800, 2000145399/0800
 
     :param patterns: List of patterns to be used by this recognizer
@@ -39,6 +53,12 @@ class CzBankAccountRecognizer(PatternRecognizer):
 
     # Weights from vyhláška č. 169/2011 Sb., applied right-to-left.
     _WEIGHTS = (1, 2, 4, 8, 5, 10, 9, 7, 3, 6)
+
+    # Bank codes issued by the ČNB ("Číselník kódů platebního
+    # styku") that fall inside the year-like 1900-2099 range: Fio banka,
+    # Citfin and TRINITY BANK. Any other year-like code makes
+    # a legal-citation or date reading at least as likely as an account.
+    _YEAR_LIKE_ISSUED_BANK_CODES = frozenset({"2010", "2060", "2070"})
 
     PATTERNS = [
         Pattern(
@@ -121,17 +141,39 @@ class CzBankAccountRecognizer(PatternRecognizer):
             return False
 
         if self._mod11(number) and (not prefix or self._mod11(prefix)):
+            if self._is_unissued_year_like_code(bank_code):
+                # A checksum-passing numerator over a year-like bank code
+                # that the ČNB never issued (e.g. 12345/2006) is at least
+                # as likely a citation or date as an account; keep the
+                # pattern score and let context words decide instead of
+                # promoting to MAX_SCORE.
+                return None
             return True
 
         return None
 
+    def _is_unissued_year_like_code(self, bank_code: str) -> bool:
+        return (
+            1900 <= int(bank_code) <= 2099
+            and bank_code not in self._YEAR_LIKE_ISSUED_BANK_CODES
+        )
+
     def invalidate_result(self, pattern_text: str) -> Optional[bool]:
         """
-        Invalidate matches that are far more likely to be dates.
+        Invalidate matches that are far more likely dates or legal citations.
 
-        A bare ``d/yyyy`` or ``dd/yyyy`` with a plausible day/month value
-        and a 19xx/20xx "bank code" (e.g. 04/2023) is treated as a date
-        fragment, not an account number.
+        Czech legal references (``262/2006 Sb.``, ``115/2010 Sb.``) and
+        date fragments (``04/2023``) share the ``N{1,3}/YYYY`` shape with
+        prefix-less account numbers, and citations are ubiquitous in the
+        legal/public-administration text this recognizer targets. Czech
+        laws are numbered with at most three digits per year, so a
+        prefix-less match whose numerator has up to 3 digits and whose
+        "bank code" is a year-like 1900-2099 value is treated as a
+        citation or date — even when the numerator happens to pass the
+        mod 11 checksum (``262/2006``, the Labour Code, does). Accounts
+        at banks whose real code falls in that range (e.g. Fio banka,
+        2010) are in practice written with longer account numbers, so
+        they are unaffected.
 
         :param pattern_text: the text to check
         :return: True if the match should be invalidated, None otherwise
@@ -139,10 +181,10 @@ class CzBankAccountRecognizer(PatternRecognizer):
         account_part, _, bank_code = pattern_text.partition("/")
         if (
             "-" not in account_part
-            and len(account_part) <= 2
+            and len(account_part) <= 3
             and account_part.isdigit()
-            and int(account_part) <= 31
-            and bank_code[:2] in ("19", "20")
+            and bank_code.isdigit()
+            and 1900 <= int(bank_code) <= 2099
         ):
             return True
         return None

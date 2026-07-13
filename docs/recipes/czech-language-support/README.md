@@ -151,6 +151,11 @@ To benchmark this recipe follow the [Presidio Research evaluation workflow](http
 - Recognizers without a checksum (ID card, passport, driving licence)
   rely heavily on context words; setting `score_threshold=0.4` filters
   context-free digit strings effectively.
+- Czech legal citations (`262/2006 Sb.`, `89/2012 Sb.`) share the `NNN/YYYY`
+  shape with prefix-less bank accounts and are ubiquitous in legal text; the
+  bank account recognizer invalidates prefix-less matches with a numerator of
+  up to 3 digits and a year-like 1900–2099 "bank code", and never promotes a
+  checksum pass over a year-like code the ČNB did not issue.
 - `xx_ent_wiki_sm` ships without a lemmatizer, so the context enhancer
   compares surface forms. The bundled context word lists therefore contain
   the inflected forms that actually occur next to each identifier.
